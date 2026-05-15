@@ -44,6 +44,19 @@ function isPastDay(day: Date): boolean {
   return isBefore(day, TODAY);
 }
 
+// The anchor a mode resets to for "today"/mode-switch: months align to the
+// 1st, the week always starts on Monday, range is a rolling window from today.
+function defaultAnchor(mode: CalMode): Date {
+  const now = new Date();
+  if (mode === "month" || mode === "quarter") {
+    return startOfMonth(now);
+  }
+  if (mode === "week") {
+    return startOfWeek(now, { weekStartsOn: 1 });
+  }
+  return startOfDay(now);
+}
+
 function dayNumClass(today: boolean, muted: boolean): string {
   if (today) {
     return "inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 font-semibold text-white";
@@ -207,20 +220,12 @@ export function CalendarView({ issues }: { issues: IssueNode[] }) {
   }, [issues]);
 
   const goToday = useCallback(() => {
-    setAnchor(
-      mode === "month" || mode === "quarter"
-        ? startOfMonth(new Date())
-        : startOfDay(new Date())
-    );
+    setAnchor(defaultAnchor(mode));
   }, [mode]);
 
   const switchMode = useCallback((m: CalMode) => {
     setMode(m);
-    setAnchor(
-      m === "month" || m === "quarter"
-        ? startOfMonth(new Date())
-        : startOfDay(new Date())
-    );
+    setAnchor(defaultAnchor(m));
   }, []);
 
   const step = useCallback(
