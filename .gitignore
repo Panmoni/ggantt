@@ -15,7 +15,8 @@ notes.md
 # Wrangler local state
 .wrangler/
 
-# Editor / OS
+# Agent / editor / OS
+.claude/
 .vscode/
 .idea/
 .DS_Store
