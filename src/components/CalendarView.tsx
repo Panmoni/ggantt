@@ -383,6 +383,7 @@ export function CalendarView({ issues }: { issues: IssueNode[] }) {
             start: anchor,
             end: addDays(anchor, 6),
           })}
+          dragHandlers={dragHandlers}
         />
       )}
       {mode === "range" && (
@@ -503,12 +504,22 @@ function RangeGrid({
   );
 }
 
+function agendaRowClass(isDragOver: boolean, past: boolean): string {
+  const base = "flex gap-4 border-slate-100 border-b px-3 py-2";
+  if (isDragOver) {
+    return `${base} bg-blue-50 ring-1 ring-blue-400 ring-inset`;
+  }
+  return past ? `${base} bg-slate-50 opacity-60` : base;
+}
+
 function Agenda({
   days,
   byDay,
+  dragHandlers,
 }: {
   days: Date[];
   byDay: Map<string, IssueNode[]>;
+  dragHandlers: DragHandlerFactory;
 }) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto rounded border border-slate-200">
@@ -516,12 +527,17 @@ function Agenda({
         const key = format(day, "yyyy-MM-dd");
         const items = byDay.get(key) ?? [];
         const past = isPastDay(day);
+        const { isDragOver, onDragOver, onDragLeave, onDrop } =
+          dragHandlers(key);
         return (
+          // biome-ignore lint/a11y/noStaticElementInteractions: agenda day row is a drag-and-drop target with no semantic HTML equivalent
+          // biome-ignore lint/a11y/noNoninteractiveElementInteractions: agenda day row is a drag-and-drop target with no semantic HTML equivalent
           <div
-            className={`flex gap-4 border-slate-100 border-b px-3 py-2 ${
-              past ? "bg-slate-50 opacity-60" : ""
-            }`}
+            className={agendaRowClass(isDragOver, past)}
             key={key}
+            onDragLeave={onDragLeave}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
           >
             <div
               className={`w-28 shrink-0 text-sm ${
