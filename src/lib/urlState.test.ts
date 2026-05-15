@@ -28,6 +28,11 @@ describe("parseUrl", () => {
     expect(s.filters.hideCompleted).toBe(false);
     expect(s.filters.hideUnscheduled).toBe(true);
   });
+
+  it("does not throw on a malformed encoded segment", () => {
+    const s = parseUrl("?tm=ENG,%,bad%ZZ", "gantt", VIEWS);
+    expect([...s.filters.teams].sort()).toEqual(["%", "ENG", "bad%ZZ"]);
+  });
 });
 
 describe("toQuery / parseUrl round-trip", () => {

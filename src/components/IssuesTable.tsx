@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import type { IssueNode } from "@/lib/queries";
+import { safeHref } from "@/lib/safeHref";
 
 function fmtDate(s: string | null): string {
   if (!s) {
@@ -47,7 +48,7 @@ export function IssuesTable({ issues }: { issues: IssueNode[] }) {
                 <td className="px-3 py-2 font-mono text-slate-500 text-xs">
                   <a
                     className="hover:underline"
-                    href={i.url}
+                    href={safeHref(i.url)}
                     rel="noreferrer"
                     target="_blank"
                   >

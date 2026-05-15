@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUpdateProjectDates } from "@/hooks/useUpdateProjectDates";
 import { dateToX, monthTicks, rangeFromPairs, xToDate } from "@/lib/dates";
 import type { ProjectNode } from "@/lib/queries";
+import { safeHref } from "@/lib/safeHref";
 
 const ROW_H = 34;
 const HEADER_H = 52;
@@ -231,7 +232,7 @@ export function ProjectGantt({ projects }: { projects: ProjectNode[] }) {
                 className={`flex items-center px-3 ${
                   idx % 2 === 1 ? "bg-slate-50/60" : ""
                 } hover:bg-slate-100`}
-                href={r.project.url}
+                href={safeHref(r.project.url)}
                 key={r.project.id}
                 rel="noreferrer"
                 style={{ height: ROW_H }}

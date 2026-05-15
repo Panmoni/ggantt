@@ -13,6 +13,19 @@ interface TokenResponse {
 
 const COOKIE_SPLIT = /;\s*/;
 
+// Length-independent, constant-time string comparison for the OAuth state.
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a);
+  const bb = enc.encode(b);
+  const len = Math.max(ab.length, bb.length);
+  let diff = ab.length === bb.length ? 0 : 1;
+  for (let i = 0; i < len; i++) {
+    diff += (ab[i] ?? 0) === (bb[i] ?? 0) ? 0 : 1;
+  }
+  return diff === 0;
+}
+
 function parseCookie(header: string | null, name: string): string | undefined {
   if (!header) {
     return;
@@ -35,7 +48,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     "ggantt_oauth_state"
   );
 
-  if (!(code && state && cookieState) || state !== cookieState) {
+  if (!(code && state && cookieState)) {
+    return new Response("OAuth state mismatch", { status: 400 });
+  }
+  if (!timingSafeEqual(state, cookieState)) {
     return new Response("OAuth state mismatch", { status: 400 });
   }
 
@@ -52,9 +68,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   });
 
   if (!tokenRes.ok) {
-    console.error(
-      `[oauth/callback] token exchange failed: ${tokenRes.status} ${await tokenRes.text()}`
-    );
+    // Log status only — the upstream body can echo request/credential
+    // context and ends up in Cloudflare logs.
+    console.error(`[oauth/callback] token exchange failed: ${tokenRes.status}`);
     return new Response("Token exchange failed", { status: 502 });
   }
 

@@ -24,6 +24,7 @@ import { buildBlockEdges, criticalPath } from "@/lib/deps";
 import { type GroupBy, groupIssues } from "@/lib/filters";
 import { type FontScale, GANTT_METRICS } from "@/lib/prefs";
 import type { IssueNode } from "@/lib/queries";
+import { safeHref } from "@/lib/safeHref";
 
 const RISK_STROKE: Record<string, string> = {
   overdue: "#dc2626",
@@ -468,7 +469,7 @@ export function GanttChart({
                   <span className={`font-mono text-slate-400 ${idClass}`}>
                     <a
                       className="hover:underline"
-                      href={r.issue.url}
+                      href={safeHref(r.issue.url)}
                       rel="noreferrer"
                       target="_blank"
                     >

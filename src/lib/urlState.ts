@@ -11,6 +11,16 @@ export interface UrlState {
   view: string;
 }
 
+// decodeURIComponent throws URIError on malformed input (e.g. a lone "%").
+// A crafted share link must not crash the app, so fall back to the raw value.
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 const SET_KEYS = [
   ["teams", "tm"],
   ["projects", "pr"],
@@ -29,7 +39,7 @@ export function parseUrl(
   for (const [field, key] of SET_KEYS) {
     const raw = p.get(key);
     if (raw) {
-      filters[field] = new Set(raw.split(",").map(decodeURIComponent));
+      filters[field] = new Set(raw.split(",").map(safeDecode));
     }
   }
   if (p.get("hc") === "0") {

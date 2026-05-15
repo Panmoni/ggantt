@@ -13,6 +13,7 @@ import {
 } from "date-fns";
 import { useMemo, useState } from "react";
 import type { IssueNode } from "@/lib/queries";
+import { safeHref } from "@/lib/safeHref";
 
 const STATE_DOT: Record<string, string> = {
   backlog: "bg-slate-400",
@@ -132,7 +133,7 @@ export function CalendarView({ issues }: { issues: IssueNode[] }) {
                       className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-xs hover:bg-slate-100 ${
                         overdue ? "text-red-600" : "text-slate-700"
                       }`}
-                      href={i.url}
+                      href={safeHref(i.url)}
                       key={i.id}
                       rel="noreferrer"
                       target="_blank"

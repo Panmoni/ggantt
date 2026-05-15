@@ -14,6 +14,14 @@ function parseCookie(header: string | null, name: string): string | undefined {
 }
 
 export const onRequestPost: PagesFunction = async ({ request }) => {
+  // CSRF defense-in-depth: this endpoint attaches the user's read/write Linear
+  // token to whatever GraphQL body it receives, so reject any cross-origin
+  // caller rather than relying solely on the cookie's SameSite=Lax attribute.
+  const origin = request.headers.get("Origin");
+  if (origin && origin !== new URL(request.url).origin) {
+    return new Response("Cross-origin request rejected", { status: 403 });
+  }
+
   const cookieHeader = request.headers.get("Cookie");
   const token = parseCookie(cookieHeader, "ggantt_token");
   if (!token) {
