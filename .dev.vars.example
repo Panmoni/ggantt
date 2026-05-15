@@ -4,3 +4,6 @@
 LINEAR_CLIENT_ID=
 LINEAR_CLIENT_SECRET=
 OAUTH_REDIRECT_URI=http://localhost:7373/oauth/callback
+# Comma-separated Linear account emails allowed to sign in. REQUIRED — if blank,
+# sign-in is disabled for everyone (fail closed). Use your Linear login email.
+ALLOWED_EMAILS=

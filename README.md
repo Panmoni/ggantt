@@ -22,8 +22,36 @@ port 7373) via `concurrently -k`, so Ctrl-C kills both — no orphaned port.
 Requires Node ≥22 and pnpm ≥10.
 
 Secrets live in `.dev.vars` (gitignored): `LINEAR_CLIENT_ID`,
-`LINEAR_CLIENT_SECRET`, `OAUTH_REDIRECT_URI=http://localhost:7373/oauth/callback`.
-The Linear OAuth app's Callback URL list must include that exact URL.
+`LINEAR_CLIENT_SECRET`, `OAUTH_REDIRECT_URI=http://localhost:7373/oauth/callback`,
+and `ALLOWED_EMAILS`. The Linear OAuth app's Callback URL list must include that
+exact URL.
+
+## Access control (single-user / private deployment)
+
+This deployment is private. Two independent gates restrict it to you:
+
+1. **App-level allowlist (in this repo).** After Linear OAuth, the callback
+   queries the Linear `viewer` and only sets a session cookie if that account's
+   email is on the comma-separated `ALLOWED_EMAILS` env var. It **fails closed**:
+   if `ALLOWED_EMAILS` is unset, *no one* can sign in. A stranger's OAuth grant
+   is discarded, so they cannot use this deployment even against their own
+   workspace. Set it locally in `.dev.vars` and in production as a Pages env var:
+
+   ```
+   ALLOWED_EMAILS=you@example.com
+   ```
+
+2. **Cloudflare Access (edge, set up in the Cloudflare dashboard).** Gate the
+   whole Pages app before any code runs:
+
+   - Zero Trust → Access → Applications → **Add an application** → *Self-hosted*
+   - Application domain: your Pages domain (e.g. `ggantt.example.com`)
+   - Add a policy: Action **Allow**, Include → **Emails** → your email
+   - Identity / login method: **One-time PIN** (email) is enough for one user
+   - Free tier covers a single user.
+
+   With Access on, you authenticate to Cloudflare first; Linear OAuth then runs
+   behind that gate. The app allowlist remains as defence-in-depth.
 
 ## Known limitation: start dates are read-only
 
@@ -52,9 +80,11 @@ external store (e.g. Supabase) keyed by issue id. Both were deliberately punted.
 pnpm deploy          # build + wrangler pages deploy dist
 ```
 
-Set `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`, and
-`OAUTH_REDIRECT_URI=https://<domain>/oauth/callback` as Pages production env
-vars, and add that callback URL to the Linear OAuth app.
+Set `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`,
+`OAUTH_REDIRECT_URI=https://<domain>/oauth/callback`, and `ALLOWED_EMAILS` as
+Pages production env vars, and add that callback URL to the Linear OAuth app.
+**If `ALLOWED_EMAILS` is missing in production, sign-in is disabled for
+everyone** (fail closed) — set it before/with your first deploy.
 
 ## Feature requests & bug reports
 

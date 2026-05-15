@@ -1,4 +1,7 @@
 interface Env {
+  // Comma-separated list of Linear account emails permitted to use this
+  // deployment. If unset/empty, NO ONE can sign in (fail closed).
+  ALLOWED_EMAILS?: string;
   LINEAR_CLIENT_ID: string;
   LINEAR_CLIENT_SECRET: string;
   OAUTH_REDIRECT_URI: string;
@@ -9,6 +12,42 @@ interface TokenResponse {
   expires_in: number;
   scope: string;
   token_type: string;
+}
+
+interface ViewerResponse {
+  data?: { viewer?: { email?: string } };
+}
+
+// Returns true only when allowlist is configured AND the email is on it.
+// An unconfigured allowlist denies everyone (fail closed) so that forgetting
+// to set ALLOWED_EMAILS can never silently open the app to the world.
+function isAllowed(allowList: string | undefined, email: string): boolean {
+  if (!allowList) {
+    return false;
+  }
+  const normalized = email.trim().toLowerCase();
+  return allowList
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(normalized);
+}
+
+// Ask Linear who the freshly issued token belongs to.
+async function fetchViewerEmail(token: string): Promise<string | undefined> {
+  const res = await fetch("https://api.linear.app/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ query: "{ viewer { email } }" }),
+  });
+  if (!res.ok) {
+    return;
+  }
+  const json = (await res.json()) as ViewerResponse;
+  return json.data?.viewer?.email;
 }
 
 const COOKIE_SPLIT = /;\s*/;
@@ -75,6 +114,26 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   const token = (await tokenRes.json()) as TokenResponse;
+
+  // A 200 response without a usable access_token (Linear error-with-200,
+  // schema drift) must fail loudly as a token error here, rather than fall
+  // through to the viewer lookup and surface as a misleading 403.
+  if (typeof token.access_token !== "string" || token.access_token === "") {
+    console.error("[oauth/callback] token response had no access_token");
+    return new Response("Token exchange failed", { status: 502 });
+  }
+
+  // Single-user gate: this deployment is private. Only Linear accounts whose
+  // email is on ALLOWED_EMAILS may establish a session. We discard the token
+  // (never set the cookie) for anyone else, so a stranger's OAuth grant is
+  // useless against this app.
+  const email = await fetchViewerEmail(token.access_token);
+  if (!(email && isAllowed(env.ALLOWED_EMAILS, email))) {
+    console.error(
+      `[oauth/callback] rejected sign-in for ${email ?? "unknown viewer"}`
+    );
+    return new Response("Not authorized for this deployment", { status: 403 });
+  }
 
   const isHttps = url.protocol === "https:";
   const secure = isHttps ? "; Secure" : "";
