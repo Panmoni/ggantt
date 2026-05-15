@@ -16,11 +16,13 @@ export function useProjects() {
       const nodes: ProjectNode[] = [];
       let after: string | null = null;
       do {
-        const data: ProjectsResponse =
-          await linearRequest<ProjectsResponse>(PROJECTS_QUERY, {
+        const data: ProjectsResponse = await linearRequest<ProjectsResponse>(
+          PROJECTS_QUERY,
+          {
             first: 50,
             after,
-          });
+          }
+        );
         nodes.push(...data.projects.nodes);
         after = data.projects.pageInfo.hasNextPage
           ? data.projects.pageInfo.endCursor
