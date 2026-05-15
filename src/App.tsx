@@ -86,7 +86,7 @@ function SignedIn({ viewerName }: { viewerName: string }) {
     error: projectsError,
   } = useProjects();
   const initial = useMemo(
-    () => parseUrl(window.location.search, "gantt", VIEWS),
+    () => parseUrl(window.location.search, "projects", VIEWS),
     []
   );
   const [view, setView] = useState<View>(initial.view as View);
