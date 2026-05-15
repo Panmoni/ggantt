@@ -70,6 +70,12 @@ function dueKey(issue: IssueNode): string | null {
   return issue.dueDate ? format(parseISO(issue.dueDate), "yyyy-MM-dd") : null;
 }
 
+// Bare issue number from an identifier like "TGBP-125" -> "125".
+function issueNumber(identifier: string): string {
+  const dash = identifier.lastIndexOf("-");
+  return dash === -1 ? identifier : identifier.slice(dash + 1);
+}
+
 function IssueChip({
   issue,
   overdue,
@@ -99,6 +105,9 @@ function IssueChip({
           STATE_DOT[issue.state.type] ?? "bg-slate-400"
         }`}
       />
+      <span className="shrink-0 tabular-nums opacity-60">
+        {issueNumber(issue.identifier)}
+      </span>
       <span className="truncate">{issue.title}</span>
     </a>
   );
@@ -218,10 +227,17 @@ export function CalendarView({ issues }: { issues: IssueNode[] }) {
     (dir: 1 | -1) => {
       setAnchor((a) => {
         switch (mode) {
-          case "month":
-            return addMonths(a, dir);
-          case "quarter":
-            return addMonths(a, dir * 3);
+          case "month": {
+            // Never page back past the current month — always look forward.
+            const next = addMonths(a, dir);
+            const min = startOfMonth(TODAY);
+            return next < min ? min : next;
+          }
+          case "quarter": {
+            const next = addMonths(a, dir * 3);
+            const min = startOfMonth(TODAY);
+            return next < min ? min : next;
+          }
           case "week":
             return addDays(a, dir * 7);
           default:
@@ -397,7 +413,12 @@ function MonthGrid({
   dragHandlers: DragHandlerFactory;
 }) {
   // Fixed 6-week (42-day) grid so the layout height is stable month to month.
-  const gridStart = startOfWeek(startOfMonth(anchor), { weekStartsOn: 1 });
+  // Start from the week containing today (never earlier) so fully-past weeks
+  // are dropped and the view always looks forward.
+  const monthStart = startOfMonth(anchor);
+  const gridStart = startOfWeek(monthStart > TODAY ? monthStart : TODAY, {
+    weekStartsOn: 1,
+  });
   const days = eachDayOfInterval({
     start: gridStart,
     end: addDays(gridStart, 41),
