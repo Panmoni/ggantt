@@ -11,7 +11,8 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useUpdateIssueDueDate } from "@/hooks/useUpdateIssueDueDate";
 import type { IssueNode } from "@/lib/queries";
 import { safeHref } from "@/lib/safeHref";
 
@@ -24,6 +25,14 @@ const STATE_DOT: Record<string, string> = {
   triage: "bg-amber-500",
 };
 
+function cellClass(isDragOver: boolean, inMonth: boolean): string {
+  const base = "min-h-28 border-slate-100 border-r border-b p-1.5";
+  if (isDragOver) {
+    return `${base} bg-blue-50 ring-1 ring-blue-400 ring-inset`;
+  }
+  return `${base} ${inMonth ? "bg-white" : "bg-slate-50/50"}`;
+}
+
 function dayNumClass(today: boolean, inMonth: boolean): string {
   if (today) {
     return "inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 font-semibold text-white";
@@ -33,6 +42,25 @@ function dayNumClass(today: boolean, inMonth: boolean): string {
 
 export function CalendarView({ issues }: { issues: IssueNode[] }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const { mutate: setDueDate } = useUpdateIssueDueDate();
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, dayKey: string) => {
+      e.preventDefault();
+      setDragOver(null);
+      const id = e.dataTransfer.getData("text/issue-id");
+      if (!id) {
+        return;
+      }
+      const issue = issues.find((i) => i.id === id);
+      if (!issue || issue.dueDate === dayKey) {
+        return;
+      }
+      setDueDate({ id, dueDate: dayKey });
+    },
+    [issues, setDueDate]
+  );
 
   const byDay = useMemo(() => {
     const m = new Map<string, IssueNode[]>();
@@ -110,12 +138,22 @@ export function CalendarView({ issues }: { issues: IssueNode[] }) {
           const items = byDay.get(key) ?? [];
           const inMonth = isSameMonth(day, month);
           const today = isToday(day);
+          const isDragOver = dragOver === key;
           return (
+            // biome-ignore lint/a11y/noStaticElementInteractions: calendar day cell is a drag-and-drop target with no semantic HTML equivalent
+            // biome-ignore lint/a11y/noNoninteractiveElementInteractions: calendar day cell is a drag-and-drop target with no semantic HTML equivalent
             <div
-              className={`min-h-28 border-slate-100 border-r border-b p-1.5 ${
-                inMonth ? "bg-white" : "bg-slate-50/50"
-              }`}
+              className={cellClass(isDragOver, inMonth)}
               key={key}
+              onDragLeave={() => setDragOver((d) => (d === key ? null : d))}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+                if (dragOver !== key) {
+                  setDragOver(key);
+                }
+              }}
+              onDrop={(e) => handleDrop(e, key)}
             >
               <div className={`mb-1 text-xs ${dayNumClass(today, inMonth)}`}>
                 {format(day, "d")}
@@ -130,11 +168,16 @@ export function CalendarView({ issues }: { issues: IssueNode[] }) {
                     i.state.type !== "canceled";
                   return (
                     <a
-                      className={`flex items-center gap-1 truncate rounded px-1 py-0.5 text-xs hover:bg-slate-100 ${
+                      className={`flex cursor-grab items-center gap-1 truncate rounded px-1 py-0.5 text-xs hover:bg-slate-100 active:cursor-grabbing ${
                         overdue ? "text-red-600" : "text-slate-700"
                       }`}
+                      draggable
                       href={safeHref(i.url)}
                       key={i.id}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("text/issue-id", i.id);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
                       rel="noreferrer"
                       target="_blank"
                       title={`${i.identifier} · ${i.title} · ${i.state.name}`}
