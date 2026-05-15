@@ -70,7 +70,7 @@ function dueKey(issue: IssueNode): string | null {
   return issue.dueDate ? format(parseISO(issue.dueDate), "yyyy-MM-dd") : null;
 }
 
-// Bare issue number from an identifier like "TGBP-125" -> "125".
+// Bare issue number from an identifier like "ABCD-125" -> "125".
 function issueNumber(identifier: string): string {
   const dash = identifier.lastIndexOf("-");
   return dash === -1 ? identifier : identifier.slice(dash + 1);

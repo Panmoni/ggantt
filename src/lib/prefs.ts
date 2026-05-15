@@ -61,7 +61,7 @@ export function saveLeftWidth(width: number): void {
 }
 
 export interface GanttMetrics {
-  /** Tailwind text-size class for the issue identifier (e.g. TGBP-12). */
+  /** Tailwind text-size class for the issue identifier (e.g. ABCD-12). */
   idClass: string;
   /** Pixel height of one issue/group row, sized to fit its text. */
   rowH: number;
