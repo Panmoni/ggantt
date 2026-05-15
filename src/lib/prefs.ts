@@ -33,6 +33,33 @@ export function saveFontScale(scale: FontScale): void {
   }
 }
 
+export const DEFAULT_LEFT_WIDTH = 320;
+export const MIN_LEFT_WIDTH = 200;
+export const MAX_LEFT_WIDTH = 720;
+
+const LEFT_WIDTH_KEY = "ggantt:leftWidth";
+
+function clampLeftWidth(n: number): number {
+  return Math.min(MAX_LEFT_WIDTH, Math.max(MIN_LEFT_WIDTH, Math.round(n)));
+}
+
+export function loadLeftWidth(): number {
+  try {
+    const v = Number(localStorage.getItem(LEFT_WIDTH_KEY));
+    return Number.isFinite(v) && v > 0 ? clampLeftWidth(v) : DEFAULT_LEFT_WIDTH;
+  } catch {
+    return DEFAULT_LEFT_WIDTH;
+  }
+}
+
+export function saveLeftWidth(width: number): void {
+  try {
+    localStorage.setItem(LEFT_WIDTH_KEY, String(clampLeftWidth(width)));
+  } catch {
+    // localStorage unavailable (private mode / blocked) — ignore.
+  }
+}
+
 export interface GanttMetrics {
   /** Tailwind text-size class for the issue identifier (e.g. TGBP-12). */
   idClass: string;

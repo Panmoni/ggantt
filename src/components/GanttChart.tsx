@@ -22,7 +22,14 @@ import {
 } from "@/lib/dates";
 import { buildBlockEdges, criticalPath } from "@/lib/deps";
 import { type GroupBy, groupIssues } from "@/lib/filters";
-import { type FontScale, GANTT_METRICS } from "@/lib/prefs";
+import {
+  type FontScale,
+  GANTT_METRICS,
+  loadLeftWidth,
+  MAX_LEFT_WIDTH,
+  MIN_LEFT_WIDTH,
+  saveLeftWidth,
+} from "@/lib/prefs";
 import type { IssueNode } from "@/lib/queries";
 import { safeHref } from "@/lib/safeHref";
 
@@ -32,7 +39,6 @@ const RISK_STROKE: Record<string, string> = {
 };
 
 const HEADER_H = 52;
-const LEFT_W = 320;
 const BAR_PAD = 6;
 const UNSCHEDULED_STUB_DAYS = 3;
 
@@ -107,6 +113,7 @@ export function GanttChart({
   fontScale: FontScale;
 }) {
   const [zoom, setZoom] = useState<Zoom>("week");
+  const [leftW, setLeftW] = useState(loadLeftWidth);
   const pxPerDay = ZOOM_PX[zoom];
   const { rowH: ROW_H, titleClass, idClass } = GANTT_METRICS[fontScale];
 
@@ -264,6 +271,49 @@ export function GanttChart({
     dragRef.current = d;
     setDrag(d);
   }, []);
+
+  const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
+  const [resizing, setResizing] = useState(false);
+
+  const beginResize = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      resizeRef.current = { startX: e.clientX, startW: leftW };
+      setResizing(true);
+    },
+    [leftW]
+  );
+
+  useEffect(() => {
+    if (!resizing) {
+      return;
+    }
+    const onMove = (e: MouseEvent) => {
+      const r = resizeRef.current;
+      if (!r) {
+        return;
+      }
+      const next = Math.min(
+        MAX_LEFT_WIDTH,
+        Math.max(MIN_LEFT_WIDTH, r.startW + (e.clientX - r.startX))
+      );
+      setLeftW(next);
+    };
+    const onUp = () => {
+      resizeRef.current = null;
+      setResizing(false);
+      setLeftW((w) => {
+        saveLeftWidth(w);
+        return w;
+      });
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [resizing]);
 
   const clientXToDate = useCallback(
     (clientX: number): Date | null => {
@@ -428,12 +478,21 @@ export function GanttChart({
       )}
 
       <div className="overflow-x-auto rounded border border-slate-200">
-        <div className="flex" style={{ width: LEFT_W + chartW }}>
+        <div className="flex" style={{ width: leftW + chartW }}>
           {/* Left sticky label column */}
           <div
-            className="sticky left-0 z-10 shrink-0 border-slate-200 border-r bg-white"
-            style={{ width: LEFT_W }}
+            className="sticky left-0 z-20 shrink-0 border-slate-200 border-r bg-white"
+            style={{ width: leftW }}
           >
+            {/* Drag handle to resize the issue column */}
+            <button
+              aria-label="Resize issue column"
+              className={`absolute top-0 -right-1 z-30 h-full w-2 cursor-col-resize border-0 bg-transparent p-0 hover:bg-blue-200/50 ${
+                resizing ? "bg-blue-300/60" : ""
+              }`}
+              onMouseDown={beginResize}
+              type="button"
+            />
             <div
               className="flex items-end border-slate-200 border-b px-3 pb-2 font-medium text-slate-500 text-xs uppercase tracking-wide"
               style={{ height: HEADER_H }}
