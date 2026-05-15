@@ -23,6 +23,7 @@ type DragMode = "start" | "end" | "move";
 
 interface Drag {
   end: Date;
+  endReal: boolean;
   grab: Date;
   id: string;
   mode: DragMode;
@@ -30,28 +31,51 @@ interface Drag {
   origEnd: Date;
   origStart: Date;
   start: Date;
+  startReal: boolean;
 }
 
 interface Row {
   end: Date;
+  endReal: boolean;
   project: ProjectNode;
   start: Date;
+  startReal: boolean;
 }
 
-function projDates(p: ProjectNode): { start: Date; end: Date } {
+function projDates(p: ProjectNode): {
+  start: Date;
+  end: Date;
+  startReal: boolean;
+  endReal: boolean;
+} {
   const s = p.startDate ? startOfDay(parseISO(p.startDate)) : null;
   const t = p.targetDate ? startOfDay(parseISO(p.targetDate)) : null;
   if (s && t) {
-    return { start: s, end: t };
+    return { start: s, end: t, startReal: true, endReal: true };
   }
   if (s) {
-    return { start: s, end: addDays(s, DEFAULT_SPAN_DAYS) };
+    return {
+      start: s,
+      end: addDays(s, DEFAULT_SPAN_DAYS),
+      startReal: true,
+      endReal: false,
+    };
   }
   if (t) {
-    return { start: addDays(t, -DEFAULT_SPAN_DAYS), end: t };
+    return {
+      start: addDays(t, -DEFAULT_SPAN_DAYS),
+      end: t,
+      startReal: false,
+      endReal: true,
+    };
   }
   const today = startOfDay(new Date());
-  return { start: today, end: addDays(today, DEFAULT_SPAN_DAYS) };
+  return {
+    start: today,
+    end: addDays(today, DEFAULT_SPAN_DAYS),
+    startReal: false,
+    endReal: false,
+  };
 }
 
 export function ProjectGantt({ projects }: { projects: ProjectNode[] }) {
@@ -141,10 +165,16 @@ export function ProjectGantt({ projects }: { projects: ProjectNode[] }) {
       if (!cur?.moved) {
         return;
       }
+      // Only persist a date if it was already set in Linear, or the user
+      // directly grabbed that edge (start/end handle) to set it. A plain
+      // "move" never invents a date that was never set — otherwise resizing
+      // a target-only project would fabricate a bogus start date.
+      const writeStart = cur.startReal || cur.mode === "start";
+      const writeEnd = cur.endReal || cur.mode === "end";
       mutateRef.current({
         id: cur.id,
-        startDate: format(cur.start, "yyyy-MM-dd"),
-        targetDate: format(cur.end, "yyyy-MM-dd"),
+        startDate: writeStart ? format(cur.start, "yyyy-MM-dd") : null,
+        targetDate: writeEnd ? format(cur.end, "yyyy-MM-dd") : null,
       });
     };
     window.addEventListener("mousemove", onMove);
@@ -304,6 +334,8 @@ export function ProjectGantt({ projects }: { projects: ProjectNode[] }) {
                   grab,
                   start: r.start,
                   end: r.end,
+                  startReal: r.startReal,
+                  endReal: r.endReal,
                   moved: false,
                 });
               };
