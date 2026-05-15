@@ -11,11 +11,13 @@ interface TokenResponse {
   token_type: string;
 }
 
+const COOKIE_SPLIT = /;\s*/;
+
 function parseCookie(header: string | null, name: string): string | undefined {
   if (!header) {
     return;
   }
-  for (const part of header.split(/;\s*/)) {
+  for (const part of header.split(COOKIE_SPLIT)) {
     const eq = part.indexOf("=");
     if (eq > 0 && part.slice(0, eq) === name) {
       return decodeURIComponent(part.slice(eq + 1));

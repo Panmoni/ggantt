@@ -103,47 +103,13 @@ function SignedIn({ viewerName }: { viewerName: string }) {
 
   return (
     <main className="w-full p-6">
-      <header className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <img alt="" height={28} src={logoUrl} width={28} />
-            <h1 className="font-semibold text-2xl text-slate-900">ggantt</h1>
-          </div>
-          <div className="flex overflow-hidden rounded border border-slate-200">
-            {VIEWS.map((v) => (
-              <button
-                className={`px-3 py-1 text-sm transition ${
-                  view === v
-                    ? "bg-slate-900 text-white"
-                    : "bg-white text-slate-700 hover:bg-slate-100"
-                }`}
-                key={v}
-                onClick={() => setView(v)}
-                type="button"
-              >
-                {VIEW_LABEL[v]}
-              </button>
-            ))}
-          </div>
-          <button
-            className="rounded border border-slate-200 bg-white px-3 py-1 text-slate-700 text-sm hover:bg-slate-100 disabled:opacity-50"
-            disabled={fetching > 0}
-            onClick={refresh}
-            type="button"
-          >
-            {fetching > 0 ? "Refreshing…" : "↻ Refresh"}
-          </button>
-        </div>
-        <div className="text-right">
-          <p className="text-slate-500 text-sm">
-            Signed in as <span className="font-medium">{viewerName}</span>
-          </p>
-          <p className="font-mono text-[10px] text-slate-300 leading-none">
-            {__COMMIT_HASH__}
-          </p>
-        </div>
-      </header>
-
+      <AppHeader
+        fetching={fetching}
+        onRefresh={refresh}
+        setView={setView}
+        view={view}
+        viewerName={viewerName}
+      />
       {view === "projects" ? (
         <ProjectsView
           error={projectsError}
@@ -151,53 +117,163 @@ function SignedIn({ viewerName }: { viewerName: string }) {
           projects={projects}
         />
       ) : (
-        <>
-          {isLoading && <GanttSkeleton />}
-
-          {error && (
-            <ErrorPanel
-              message={error instanceof Error ? error.message : String(error)}
-              title="Failed to load issues"
-            />
-          )}
-
-          {issues && issues.length === 0 && (
-            <div className="rounded border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
-              No issues found.
-            </div>
-          )}
-
-          {issues && issues.length > 0 && (
-            <>
-              <FilterBar
-                filters={filters}
-                groupBy={groupBy}
-                options={options}
-                setFilters={setFilters}
-                setGroupBy={setGroupBy}
-              />
-              <p className="mb-3 text-slate-500 text-sm">
-                {filtered.length} of {issues.length} issue
-                {issues.length === 1 ? "" : "s"}
-              </p>
-              {filtered.length === 0 ? (
-                <div className="rounded border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
-                  No issues match the current filters.
-                </div>
-              ) : view === "gantt" ? (
-                <GanttChart groupBy={groupBy} issues={filtered} />
-              ) : view === "calendar" ? (
-                <CalendarView issues={filtered} />
-              ) : view === "workload" ? (
-                <WorkloadView issues={filtered} />
-              ) : (
-                <IssuesTable issues={filtered} />
-              )}
-            </>
-          )}
-        </>
+        <IssueArea
+          error={error}
+          filtered={filtered}
+          filters={filters}
+          groupBy={groupBy}
+          isLoading={isLoading}
+          issues={issues}
+          options={options}
+          setFilters={setFilters}
+          setGroupBy={setGroupBy}
+          view={view}
+        />
       )}
     </main>
+  );
+}
+
+function AppHeader({
+  view,
+  setView,
+  fetching,
+  onRefresh,
+  viewerName,
+}: {
+  view: View;
+  setView: (v: View) => void;
+  fetching: number;
+  onRefresh: () => void;
+  viewerName: string;
+}) {
+  return (
+    <header className="mb-6 flex items-center justify-between">
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <img alt="" height={28} src={logoUrl} width={28} />
+          <h1 className="font-semibold text-2xl text-slate-900">ggantt</h1>
+        </div>
+        <div className="flex overflow-hidden rounded border border-slate-200">
+          {VIEWS.map((v) => (
+            <button
+              className={`px-3 py-1 text-sm transition ${
+                view === v
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-700 hover:bg-slate-100"
+              }`}
+              key={v}
+              onClick={() => setView(v)}
+              type="button"
+            >
+              {VIEW_LABEL[v]}
+            </button>
+          ))}
+        </div>
+        <button
+          className="rounded border border-slate-200 bg-white px-3 py-1 text-slate-700 text-sm hover:bg-slate-100 disabled:opacity-50"
+          disabled={fetching > 0}
+          onClick={onRefresh}
+          type="button"
+        >
+          {fetching > 0 ? "Refreshing…" : "↻ Refresh"}
+        </button>
+      </div>
+      <div className="text-right">
+        <p className="text-slate-500 text-sm">
+          Signed in as <span className="font-medium">{viewerName}</span>
+        </p>
+        <p className="font-mono text-[10px] text-slate-300 leading-none">
+          {__COMMIT_HASH__}
+        </p>
+      </div>
+    </header>
+  );
+}
+
+function ChartBody({
+  view,
+  filtered,
+  groupBy,
+}: {
+  view: View;
+  filtered: import("@/lib/queries").IssueNode[];
+  groupBy: GroupBy;
+}) {
+  switch (view) {
+    case "gantt":
+      return <GanttChart groupBy={groupBy} issues={filtered} />;
+    case "calendar":
+      return <CalendarView issues={filtered} />;
+    case "workload":
+      return <WorkloadView issues={filtered} />;
+    default:
+      return <IssuesTable issues={filtered} />;
+  }
+}
+
+function IssueArea({
+  issues,
+  isLoading,
+  error,
+  options,
+  filters,
+  setFilters,
+  groupBy,
+  setGroupBy,
+  filtered,
+  view,
+}: {
+  issues: import("@/lib/queries").IssueNode[] | undefined;
+  isLoading: boolean;
+  error: unknown;
+  options: ReturnType<typeof buildOptions>;
+  filters: Filters;
+  setFilters: (f: Filters) => void;
+  groupBy: GroupBy;
+  setGroupBy: (g: GroupBy) => void;
+  filtered: import("@/lib/queries").IssueNode[];
+  view: View;
+}) {
+  if (isLoading) {
+    return <GanttSkeleton />;
+  }
+  if (error) {
+    return (
+      <ErrorPanel
+        message={error instanceof Error ? error.message : String(error)}
+        title="Failed to load issues"
+      />
+    );
+  }
+  if (!issues || issues.length === 0) {
+    return (
+      <div className="rounded border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
+        No issues found.
+      </div>
+    );
+  }
+  return (
+    <>
+      <FilterBar
+        filters={filters}
+        groupBy={groupBy}
+        options={options}
+        setFilters={setFilters}
+        setGroupBy={setGroupBy}
+      />
+      <p className="mb-3 text-slate-500 text-sm">
+        {filtered.length} of {issues.length} issue
+        {issues.length === 1 ? "" : "s"}
+      </p>
+      {filtered.length === 0 ? (
+        <div className="rounded border border-slate-200 bg-slate-50 p-6 text-center text-slate-500">
+          No issues match the current filters.
+        </div>
+      ) : (
+        <ChartBody filtered={filtered} groupBy={groupBy} view={view} />
+      )}
+    </>
   );
 }
 

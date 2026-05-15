@@ -23,6 +23,13 @@ const STATE_DOT: Record<string, string> = {
   triage: "bg-amber-500",
 };
 
+function dayNumClass(today: boolean, inMonth: boolean): string {
+  if (today) {
+    return "inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 font-semibold text-white";
+  }
+  return inMonth ? "text-slate-600" : "text-slate-300";
+}
+
 export function CalendarView({ issues }: { issues: IssueNode[] }) {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
 
@@ -109,15 +116,7 @@ export function CalendarView({ issues }: { issues: IssueNode[] }) {
               }`}
               key={key}
             >
-              <div
-                className={`mb-1 text-xs ${
-                  today
-                    ? "inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 font-semibold text-white"
-                    : inMonth
-                      ? "text-slate-600"
-                      : "text-slate-300"
-                }`}
-              >
+              <div className={`mb-1 text-xs ${dayNumClass(today, inMonth)}`}>
                 {format(day, "d")}
               </div>
               <div className="flex flex-col gap-0.5">

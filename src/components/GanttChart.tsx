@@ -47,6 +47,23 @@ const STATE_FILL: Record<string, string> = {
   triage: "#f59e0b",
 };
 
+function rowBg(isSelected: boolean, idx: number): string {
+  if (isSelected) {
+    return "bg-blue-50";
+  }
+  return idx % 2 === 1 ? "bg-slate-50/60" : "";
+}
+
+function barStrokeWidth(
+  riskStroke: string | undefined,
+  isScheduled: boolean
+): number {
+  if (riskStroke) {
+    return 2;
+  }
+  return isScheduled ? 0 : 1;
+}
+
 interface IssueRow {
   end: Date | null;
   issue: IssueNode;
@@ -208,13 +225,12 @@ export function GanttChart({
 
   const posById = useMemo(() => {
     const m = new Map<string, { startX: number; endX: number; midY: number }>();
-    rows.forEach((r, idx) => {
+    for (const [idx, r] of rows.entries()) {
       if (r.kind !== "issue") {
-        return;
+        continue;
       }
-      const start = r.start;
       const end = r.end ?? addDays(r.start, UNSCHEDULED_STUB_DAYS);
-      const sx = dateToX(start, range.min, pxPerDay);
+      const sx = dateToX(r.start, range.min, pxPerDay);
       const w = Math.max(
         dateToX(end, range.min, pxPerDay) - sx + pxPerDay,
         pxPerDay
@@ -224,7 +240,7 @@ export function GanttChart({
         endX: sx + w,
         midY: HEADER_H + idx * ROW_H + ROW_H / 2,
       });
-    });
+    }
     return m;
   }, [rows, range.min, pxPerDay]);
 
@@ -280,7 +296,7 @@ export function GanttChart({
     const onUp = () => {
       const cur = dragRef.current;
       updateDrag(null);
-      if (!(cur && cur.moved)) {
+      if (!cur?.moved) {
         return;
       }
       const next = format(cur.previewEnd, "yyyy-MM-dd");
@@ -432,13 +448,10 @@ export function GanttChart({
                 </div>
               ) : (
                 <div
-                  className={`flex items-center gap-2 px-3 ${
-                    selected.has(r.issue.id)
-                      ? "bg-blue-50"
-                      : idx % 2 === 1
-                        ? "bg-slate-50/60"
-                        : ""
-                  } hover:bg-slate-100`}
+                  className={`flex items-center gap-2 px-3 ${rowBg(
+                    selected.has(r.issue.id),
+                    idx
+                  )} hover:bg-slate-100`}
                   key={r.issue.id}
                   style={{ height: ROW_H }}
                 >
@@ -765,7 +778,7 @@ export function GanttChart({
                     rx={3}
                     stroke={riskStroke ?? fill}
                     strokeDasharray={isScheduled ? undefined : "4 3"}
-                    strokeWidth={riskStroke ? 2 : isScheduled ? 0 : 1}
+                    strokeWidth={barStrokeWidth(riskStroke, isScheduled)}
                     width={w}
                     x={x}
                     y={y}

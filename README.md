@@ -12,12 +12,14 @@ A hand-rolled SVG Gantt chart over your Linear issues. Read issues, filter/group
 ## Local dev
 
 ```bash
-npm install
-npm run dev          # vite + wrangler together, http://localhost:7373
+pnpm install
+pnpm dev             # vite + wrangler together, http://localhost:7373
+pnpm check           # typecheck + biome/ultracite lint
 ```
 
-`npm run dev` runs vite (internal port 7374) behind `wrangler pages dev` (browser
+`pnpm dev` runs vite (internal port 7374) behind `wrangler pages dev` (browser
 port 7373) via `concurrently -k`, so Ctrl-C kills both — no orphaned port.
+Requires Node ≥22 and pnpm ≥10.
 
 Secrets live in `.dev.vars` (gitignored): `LINEAR_CLIENT_ID`,
 `LINEAR_CLIENT_SECRET`, `OAUTH_REDIRECT_URI=http://localhost:7373/oauth/callback`.
@@ -47,7 +49,7 @@ external store (e.g. Supabase) keyed by issue id. Both were deliberately punted.
 ## Deploy (Cloudflare Pages)
 
 ```bash
-npm run deploy       # build + wrangler pages deploy dist
+pnpm deploy          # build + wrangler pages deploy dist
 ```
 
 Set `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`, and

@@ -23,48 +23,88 @@ function intensity(n: number): string {
   return "bg-blue-600 text-white";
 }
 
+interface Span {
+  e: Date;
+  s: Date;
+  who: string;
+}
+
+interface Workload {
+  assignees: string[];
+  counts: Map<string, number>;
+  weeks: Date[];
+}
+
+function compareAssignee(a: string, b: string): number {
+  if (a === "Unassigned") {
+    return 1;
+  }
+  if (b === "Unassigned") {
+    return -1;
+  }
+  return a.localeCompare(b);
+}
+
+function buildSpans(issues: IssueNode[]): {
+  spans: Span[];
+  min: Date | null;
+  max: Date | null;
+} {
+  let min: Date | null = null;
+  let max: Date | null = null;
+  const spans: Span[] = [];
+  for (const i of issues) {
+    if (i.state.type === "completed" || i.state.type === "canceled") {
+      continue;
+    }
+    const s = issueStart(i);
+    const e = issueEnd(i) ?? addDays(s, 1);
+    spans.push({ who: i.assignee?.name ?? "Unassigned", s, e });
+    if (!min || s < min) {
+      min = s;
+    }
+    if (!max || e > max) {
+      max = e;
+    }
+  }
+  return { spans, min, max };
+}
+
+function buildCounts(spans: Span[], weeks: Date[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const sp of spans) {
+    const ws = startOfWeek(sp.s, { weekStartsOn: 1 });
+    const we = startOfWeek(sp.e, { weekStartsOn: 1 });
+    for (const w of weeks) {
+      if (w >= ws && w <= we) {
+        const k = `${sp.who}|${w.getTime()}`;
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+      }
+    }
+  }
+  return counts;
+}
+
+function computeWorkload(issues: IssueNode[]): Workload {
+  const { spans, min, max } = buildSpans(issues);
+  if (!(min && max)) {
+    return { weeks: [], assignees: [], counts: new Map() };
+  }
+  const weeks = eachWeekOfInterval(
+    { start: min, end: max },
+    { weekStartsOn: 1 }
+  );
+  const assignees = [...new Set(spans.map((sp) => sp.who))].sort(
+    compareAssignee
+  );
+  return { weeks, assignees, counts: buildCounts(spans, weeks) };
+}
+
 export function WorkloadView({ issues }: { issues: IssueNode[] }) {
-  const { weeks, assignees, counts } = useMemo(() => {
-    let min: Date | null = null;
-    let max: Date | null = null;
-    const spans: { who: string; s: Date; e: Date }[] = [];
-    for (const i of issues) {
-      if (i.state.type === "completed" || i.state.type === "canceled") {
-        continue;
-      }
-      const s = issueStart(i);
-      const e = issueEnd(i) ?? addDays(s, 1);
-      spans.push({ who: i.assignee?.name ?? "Unassigned", s, e });
-      if (!min || s < min) {
-        min = s;
-      }
-      if (!max || e > max) {
-        max = e;
-      }
-    }
-    if (!(min && max)) {
-      return { weeks: [], assignees: [], counts: new Map() };
-    }
-    const weeks = eachWeekOfInterval(
-      { start: min, end: max },
-      { weekStartsOn: 1 }
-    );
-    const assignees = [...new Set(spans.map((sp) => sp.who))].sort((a, b) =>
-      a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b)
-    );
-    const counts = new Map<string, number>();
-    for (const sp of spans) {
-      const ws = startOfWeek(sp.s, { weekStartsOn: 1 });
-      const we = startOfWeek(sp.e, { weekStartsOn: 1 });
-      for (const w of weeks) {
-        if (w >= ws && w <= we) {
-          const k = `${sp.who}|${w.getTime()}`;
-          counts.set(k, (counts.get(k) ?? 0) + 1);
-        }
-      }
-    }
-    return { weeks, assignees, counts };
-  }, [issues]);
+  const { weeks, assignees, counts } = useMemo(
+    () => computeWorkload(issues),
+    [issues]
+  );
 
   if (weeks.length === 0) {
     return (

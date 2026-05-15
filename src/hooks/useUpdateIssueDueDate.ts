@@ -35,7 +35,9 @@ export function useUpdateIssueDueDate() {
     },
 
     onError: (_err, _vars, ctx) => {
-      ctx?.prev.forEach(([key, data]) => qc.setQueryData(key, data));
+      for (const [key, data] of ctx?.prev ?? []) {
+        qc.setQueryData(key, data);
+      }
     },
 
     onSettled: () => {

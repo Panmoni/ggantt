@@ -138,7 +138,7 @@ export function ProjectGantt({ projects }: { projects: ProjectNode[] }) {
     const onUp = () => {
       const cur = dragRef.current;
       updateDrag(null);
-      if (!(cur && cur.moved)) {
+      if (!cur?.moved) {
         return;
       }
       mutateRef.current({

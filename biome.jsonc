@@ -10,5 +10,49 @@
       "!dist",
       "!node_modules"
     ]
-  }
+  },
+  "javascript": {
+    "globals": ["__COMMIT_HASH__"]
+  },
+  "linter": {
+    "rules": {
+      "style": {
+        // React components are PascalCase, hooks/libs camelCase — keep
+        // those idiomatic instead of forcing kebab-case filenames.
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": {
+            "requireAscii": true,
+            "filenameCases": ["camelCase", "PascalCase", "kebab-case"]
+          }
+        }
+      }
+    }
+  },
+  "overrides": [
+    {
+      // The two hand-rolled SVG charts are single cohesive render
+      // components: high intrinsic cognitive complexity, pointer-driven
+      // <g>/<rect> drag handles (no semantic HTML equivalent), and
+      // gridline/stripe rects whose array index *is* their stable
+      // identity. The drag effects intentionally read refs and omit
+      // deps to avoid re-subscribing window listeners mid-drag. These
+      // rules don't fit dataviz here; strict everywhere else.
+      "includes": [
+        "src/components/GanttChart.tsx",
+        "src/components/ProjectGantt.tsx"
+      ],
+      "linter": {
+        "rules": {
+          "complexity": { "noExcessiveCognitiveComplexity": "off" },
+          "correctness": { "useExhaustiveDependencies": "off" },
+          "suspicious": { "noArrayIndexKey": "off" },
+          "a11y": {
+            "noStaticElementInteractions": "off",
+            "noNoninteractiveElementInteractions": "off"
+          }
+        }
+      }
+    }
+  ]
 }
