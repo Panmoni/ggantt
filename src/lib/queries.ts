@@ -36,6 +36,8 @@ export const ISSUES_QUERY = /* GraphQL */ `
         createdAt
         dueDate
         estimate
+        priority
+        priorityLabel
         state {
           id
           name
@@ -101,6 +103,9 @@ export interface IssueNode {
   estimate: number | null;
   id: string;
   identifier: string;
+  // Linear priority: 0 = none, 1 = urgent, 2 = high, 3 = medium, 4 = low.
+  priority: number;
+  priorityLabel: string;
   project: {
     id: string;
     name: string;

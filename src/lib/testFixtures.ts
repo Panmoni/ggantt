@@ -14,6 +14,8 @@ export function makeIssue(overrides: Partial<IssueNode> = {}): IssueNode {
     startedAt: null,
     dueDate: null,
     estimate: null,
+    priority: 0,
+    priorityLabel: "No priority",
     assignee: null,
     project: null,
     cycle: null,

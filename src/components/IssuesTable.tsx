@@ -27,6 +27,7 @@ type SortKey =
   | "id"
   | "title"
   | "state"
+  | "priority"
   | "started"
   | "due"
   | "est"
@@ -40,6 +41,7 @@ const COLUMNS: { key: SortKey; label: string }[] = [
   { key: "id", label: "ID" },
   { key: "title", label: "Title" },
   { key: "state", label: "State" },
+  { key: "priority", label: "Priority" },
   { key: "started", label: "Started" },
   { key: "due", label: "Due" },
   { key: "est", label: "Est" },
@@ -58,6 +60,10 @@ function sortValue(i: IssueNode, key: SortKey): string | number | null {
       return i.title.toLowerCase();
     case "state":
       return i.state.name.toLowerCase();
+    case "priority":
+      // Linear uses 0 for "no priority"; treat it as missing so real
+      // priorities (1 urgent … 4 low) sort ahead of unprioritised issues.
+      return i.priority === 0 ? null : i.priority;
     case "started":
       return i.startedAt ?? i.createdAt;
     case "due":
@@ -172,6 +178,9 @@ export function IssuesTable({ issues }: { issues: IssueNode[] }) {
                   >
                     {i.state.name}
                   </span>
+                </td>
+                <td className="px-3 py-2 text-slate-600">
+                  {i.priority === 0 ? "—" : i.priorityLabel}
                 </td>
                 <td className="px-3 py-2 text-slate-600">
                   {fmtDate(i.startedAt ?? i.createdAt)}
