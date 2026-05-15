@@ -605,8 +605,10 @@ function MiniMonth({
         ))}
         {days.map((day) => {
           const key = format(day, "yyyy-MM-dd");
-          const items = byDay.get(key) ?? [];
           const inMonth = isSameMonth(day, month);
+          // Spillover days belong to an adjacent mini-month; showing their
+          // issues here would duplicate them in the neighbouring grid.
+          const items = inMonth ? (byDay.get(key) ?? []) : [];
           const today = isToday(day);
           const past = isPastDay(day);
           return (
