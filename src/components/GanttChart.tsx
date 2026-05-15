@@ -22,6 +22,7 @@ import {
 } from "@/lib/dates";
 import { buildBlockEdges, criticalPath } from "@/lib/deps";
 import { type GroupBy, groupIssues } from "@/lib/filters";
+import { type FontScale, GANTT_METRICS } from "@/lib/prefs";
 import type { IssueNode } from "@/lib/queries";
 
 const RISK_STROKE: Record<string, string> = {
@@ -29,7 +30,6 @@ const RISK_STROKE: Record<string, string> = {
   "at-risk": "#d97706",
 };
 
-const ROW_H = 30;
 const HEADER_H = 52;
 const LEFT_W = 320;
 const BAR_PAD = 6;
@@ -99,12 +99,15 @@ function sortIssueRows(rows: IssueRow[]): IssueRow[] {
 export function GanttChart({
   issues,
   groupBy,
+  fontScale,
 }: {
   issues: IssueNode[];
   groupBy: GroupBy;
+  fontScale: FontScale;
 }) {
   const [zoom, setZoom] = useState<Zoom>("week");
   const pxPerDay = ZOOM_PX[zoom];
+  const { rowH: ROW_H, titleClass, idClass } = GANTT_METRICS[fontScale];
 
   const { range, rows } = useMemo(() => {
     const range = computeRange(issues);
@@ -164,6 +167,9 @@ export function GanttChart({
     null
   );
   const titleMutation = useUpdateIssueTitle();
+  const mutation = useUpdateIssueDueDate();
+  const mutateRef = useRef(mutation.mutate);
+  mutateRef.current = mutation.mutate;
 
   const commitTitle = useCallback(() => {
     setEditing((e) => {
@@ -242,7 +248,7 @@ export function GanttChart({
       });
     }
     return m;
-  }, [rows, range.min, pxPerDay]);
+  }, [rows, range.min, pxPerDay, ROW_H]);
 
   const months = monthTicks(range);
   const ticks = pxPerDay >= 14 ? dayTicks(range) : weekTicks(range);
@@ -252,9 +258,6 @@ export function GanttChart({
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
-  const mutation = useUpdateIssueDueDate();
-  const mutateRef = useRef(mutation.mutate);
-  mutateRef.current = mutation.mutate;
 
   const updateDrag = useCallback((d: Drag | null) => {
     dragRef.current = d;
@@ -462,7 +465,7 @@ export function GanttChart({
                     title="Select for bulk shift"
                     type="checkbox"
                   />
-                  <span className="font-mono text-[10px] text-slate-400">
+                  <span className={`font-mono text-slate-400 ${idClass}`}>
                     <a
                       className="hover:underline"
                       href={r.issue.url}
@@ -475,7 +478,7 @@ export function GanttChart({
                   {editing?.id === r.issue.id ? (
                     <input
                       autoFocus
-                      className="min-w-0 flex-1 rounded border border-blue-300 px-1 text-slate-900 text-xs outline-none"
+                      className={`min-w-0 flex-1 rounded border border-blue-300 px-1 text-slate-900 outline-none ${titleClass}`}
                       onBlur={commitTitle}
                       onChange={(e) =>
                         setEditing({
@@ -494,7 +497,7 @@ export function GanttChart({
                     />
                   ) : (
                     <span
-                      className="min-w-0 flex-1 cursor-text truncate text-slate-800 text-xs"
+                      className={`min-w-0 flex-1 cursor-text truncate text-slate-800 ${titleClass}`}
                       onDoubleClick={() =>
                         setEditing({
                           id: r.issue.id,

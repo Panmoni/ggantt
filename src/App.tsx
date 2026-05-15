@@ -19,6 +19,8 @@ import {
   type GroupBy,
 } from "@/lib/filters";
 import { UnauthenticatedError } from "@/lib/linear";
+import { type FontScale, loadFontScale, saveFontScale } from "@/lib/prefs";
+import type { IssueNode, ProjectNode } from "@/lib/queries";
 import { parseUrl, toQuery } from "@/lib/urlState";
 
 type View = "gantt" | "table" | "calendar" | "workload" | "projects";
@@ -77,10 +79,19 @@ function SignedIn({ viewerName }: { viewerName: string }) {
     isLoading: projectsLoading,
     error: projectsError,
   } = useProjects();
-  const initial = useMemo(() => parseUrl(window.location.search, "gantt"), []);
+  const initial = useMemo(
+    () => parseUrl(window.location.search, "gantt", VIEWS),
+    []
+  );
   const [view, setView] = useState<View>(initial.view as View);
   const [filters, setFilters] = useState<Filters>(initial.filters);
   const [groupBy, setGroupBy] = useState<GroupBy>(initial.groupBy);
+  const [fontScale, setFontScaleState] = useState<FontScale>(loadFontScale);
+
+  const setFontScale = (s: FontScale) => {
+    setFontScaleState(s);
+    saveFontScale(s);
+  };
 
   useEffect(() => {
     const qs = toQuery({ view, groupBy, filters });
@@ -121,11 +132,13 @@ function SignedIn({ viewerName }: { viewerName: string }) {
           error={error}
           filtered={filtered}
           filters={filters}
+          fontScale={fontScale}
           groupBy={groupBy}
           isLoading={isLoading}
           issues={issues}
           options={options}
           setFilters={setFilters}
+          setFontScale={setFontScale}
           setGroupBy={setGroupBy}
           view={view}
         />
@@ -195,14 +208,18 @@ function ChartBody({
   view,
   filtered,
   groupBy,
+  fontScale,
 }: {
   view: View;
-  filtered: import("@/lib/queries").IssueNode[];
+  filtered: IssueNode[];
   groupBy: GroupBy;
+  fontScale: FontScale;
 }) {
   switch (view) {
     case "gantt":
-      return <GanttChart groupBy={groupBy} issues={filtered} />;
+      return (
+        <GanttChart fontScale={fontScale} groupBy={groupBy} issues={filtered} />
+      );
     case "calendar":
       return <CalendarView issues={filtered} />;
     case "workload":
@@ -221,10 +238,12 @@ function IssueArea({
   setFilters,
   groupBy,
   setGroupBy,
+  fontScale,
+  setFontScale,
   filtered,
   view,
 }: {
-  issues: import("@/lib/queries").IssueNode[] | undefined;
+  issues: IssueNode[] | undefined;
   isLoading: boolean;
   error: unknown;
   options: ReturnType<typeof buildOptions>;
@@ -232,7 +251,9 @@ function IssueArea({
   setFilters: (f: Filters) => void;
   groupBy: GroupBy;
   setGroupBy: (g: GroupBy) => void;
-  filtered: import("@/lib/queries").IssueNode[];
+  fontScale: FontScale;
+  setFontScale: (s: FontScale) => void;
+  filtered: IssueNode[];
   view: View;
 }) {
   if (isLoading) {
@@ -257,9 +278,11 @@ function IssueArea({
     <>
       <FilterBar
         filters={filters}
+        fontScale={fontScale}
         groupBy={groupBy}
         options={options}
         setFilters={setFilters}
+        setFontScale={setFontScale}
         setGroupBy={setGroupBy}
       />
       <p className="mb-3 text-slate-500 text-sm">
@@ -271,7 +294,12 @@ function IssueArea({
           No issues match the current filters.
         </div>
       ) : (
-        <ChartBody filtered={filtered} groupBy={groupBy} view={view} />
+        <ChartBody
+          filtered={filtered}
+          fontScale={fontScale}
+          groupBy={groupBy}
+          view={view}
+        />
       )}
     </>
   );
@@ -282,7 +310,7 @@ function ProjectsView({
   isLoading,
   error,
 }: {
-  projects: import("@/lib/queries").ProjectNode[] | undefined;
+  projects: ProjectNode[] | undefined;
   isLoading: boolean;
   error: unknown;
 }) {

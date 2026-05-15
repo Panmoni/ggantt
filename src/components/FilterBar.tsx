@@ -3,18 +3,20 @@ import {
   emptyFilters,
   type FilterOptions,
   type Filters,
+  GROUP_BY_VALUES,
   type GroupBy,
 } from "@/lib/filters";
+import { FONT_SCALE_LABEL, FONT_SCALES, type FontScale } from "@/lib/prefs";
 
 interface Props {
   filters: Filters;
+  fontScale: FontScale;
   groupBy: GroupBy;
   options: FilterOptions;
   setFilters: (f: Filters) => void;
+  setFontScale: (s: FontScale) => void;
   setGroupBy: (g: GroupBy) => void;
 }
-
-const GROUPS: GroupBy[] = ["flat", "project", "team", "cycle", "assignee"];
 
 export function FilterBar({
   options,
@@ -22,6 +24,8 @@ export function FilterBar({
   setFilters,
   groupBy,
   setGroupBy,
+  fontScale,
+  setFontScale,
 }: Props) {
   const patch = (p: Partial<Filters>) => setFilters({ ...filters, ...p });
 
@@ -94,12 +98,33 @@ export function FilterBar({
           onChange={(e) => setGroupBy(e.target.value as GroupBy)}
           value={groupBy}
         >
-          {GROUPS.map((g) => (
+          {GROUP_BY_VALUES.map((g) => (
             <option className="capitalize" key={g} value={g}>
               {g}
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-500 text-sm">Text:</span>
+        <div className="flex overflow-hidden rounded border border-slate-200">
+          {FONT_SCALES.map((s) => (
+            <button
+              className={`px-2 py-1.5 text-sm transition ${
+                fontScale === s
+                  ? "bg-slate-900 text-white"
+                  : "bg-white text-slate-700 hover:bg-slate-100"
+              }`}
+              key={s}
+              onClick={() => setFontScale(s)}
+              title={`${FONT_SCALE_LABEL[s]} text size`}
+              type="button"
+            >
+              {FONT_SCALE_LABEL[s]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {anyActive && (
