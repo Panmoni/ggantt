@@ -1,4 +1,9 @@
-import { emptyFilters, type Filters, type GroupBy } from "@/lib/filters";
+import {
+  emptyFilters,
+  type Filters,
+  type GroupBy,
+  isGroupBy,
+} from "@/lib/filters";
 
 export interface UrlState {
   filters: Filters;
@@ -14,7 +19,11 @@ const SET_KEYS = [
   ["cycles", "cy"],
 ] as const;
 
-export function parseUrl(search: string, defaultView: string): UrlState {
+export function parseUrl(
+  search: string,
+  defaultView: string,
+  validViews: readonly string[]
+): UrlState {
   const p = new URLSearchParams(search);
   const filters = emptyFilters();
   for (const [field, key] of SET_KEYS) {
@@ -29,9 +38,11 @@ export function parseUrl(search: string, defaultView: string): UrlState {
   if (p.get("hu") === "1") {
     filters.hideUnscheduled = true;
   }
+  const rawView = p.get("v");
+  const rawGroup = p.get("g");
   return {
-    view: p.get("v") ?? defaultView,
-    groupBy: (p.get("g") as GroupBy) ?? "flat",
+    view: rawView && validViews.includes(rawView) ? rawView : defaultView,
+    groupBy: rawGroup && isGroupBy(rawGroup) ? rawGroup : "flat",
     filters,
   };
 }

@@ -1,6 +1,18 @@
 import type { IssueNode } from "@/lib/queries";
 
-export type GroupBy = "flat" | "project" | "team" | "cycle" | "assignee";
+export const GROUP_BY_VALUES = [
+  "flat",
+  "project",
+  "team",
+  "cycle",
+  "assignee",
+] as const;
+
+export type GroupBy = (typeof GROUP_BY_VALUES)[number];
+
+export function isGroupBy(v: string): v is GroupBy {
+  return (GROUP_BY_VALUES as readonly string[]).includes(v);
+}
 
 export interface Filters {
   assignees: Set<string>;
