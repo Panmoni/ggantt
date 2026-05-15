@@ -206,6 +206,13 @@ function AppHeader({
       <div className="flex flex-col items-end gap-1.5">
         <p className="text-slate-500 text-sm">
           Signed in as <span className="font-medium">{viewerName}</span>
+          {" · "}
+          <a
+            className="hover:text-slate-700 hover:underline"
+            href="/oauth/logout"
+          >
+            Sign out
+          </a>
         </p>
         <div className="flex items-center gap-1.5">
           <span className="text-slate-500 text-xs">Text:</span>
