@@ -52,8 +52,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   });
 
   if (!tokenRes.ok) {
-    const body = await tokenRes.text();
-    return new Response(`Token exchange failed: ${body}`, { status: 502 });
+    console.error(
+      `[oauth/callback] token exchange failed: ${tokenRes.status} ${await tokenRes.text()}`
+    );
+    return new Response("Token exchange failed", { status: 502 });
   }
 
   const token = (await tokenRes.json()) as TokenResponse;
@@ -61,10 +63,18 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const isHttps = url.protocol === "https:";
   const secure = isHttps ? "; Secure" : "";
 
+  // Match the cookie lifetime to the token's. Linear's default tokens are
+  // long-lived; fall back to 30 days if expires_in is absent or unreasonable.
+  const THIRTY_DAYS = 2_592_000;
+  const maxAge =
+    Number.isFinite(token.expires_in) && token.expires_in > 0
+      ? token.expires_in
+      : THIRTY_DAYS;
+
   const headers = new Headers({ Location: "/" });
   headers.append(
     "Set-Cookie",
-    `ggantt_token=${encodeURIComponent(token.access_token)}; HttpOnly${secure}; SameSite=Lax; Path=/; Max-Age=2592000`
+    `ggantt_token=${encodeURIComponent(token.access_token)}; HttpOnly${secure}; SameSite=Lax; Path=/; Max-Age=${maxAge}`
   );
   headers.append(
     "Set-Cookie",
