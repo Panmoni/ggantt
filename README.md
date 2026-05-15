@@ -23,8 +23,9 @@ Requires Node ≥22 and pnpm ≥10.
 
 Secrets live in `.dev.vars` (gitignored): `LINEAR_CLIENT_ID`,
 `LINEAR_CLIENT_SECRET`, `OAUTH_REDIRECT_URI=http://localhost:7373/oauth/callback`,
-and `ALLOWED_EMAILS`. The Linear OAuth app's Callback URL list must include that
-exact URL.
+`ALLOWED_EMAILS`, and `COOKIE_SECRET` (`openssl rand -base64 32` — encrypts the
+token cookie; if unset the OAuth/proxy endpoints return 500). The Linear OAuth
+app's Callback URL list must include that exact callback URL.
 
 ## Access control (single-user / private deployment)
 
@@ -81,10 +82,33 @@ pnpm deploy          # build + wrangler pages deploy dist
 ```
 
 Set `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`,
-`OAUTH_REDIRECT_URI=https://<domain>/oauth/callback`, and `ALLOWED_EMAILS` as
-Pages production env vars, and add that callback URL to the Linear OAuth app.
-**If `ALLOWED_EMAILS` is missing in production, sign-in is disabled for
-everyone** (fail closed) — set it before/with your first deploy.
+`OAUTH_REDIRECT_URI=https://<domain>/oauth/callback`, `ALLOWED_EMAILS`, and
+`COOKIE_SECRET` as Pages production env vars, and add that callback URL to the
+Linear OAuth app. **If `ALLOWED_EMAILS` is missing in production, sign-in is
+disabled for everyone** (fail closed); **if `COOKIE_SECRET` is missing, the
+OAuth callback and the `/api/linear` proxy return 500** — set both before/with
+your first deploy.
+
+## Security & operations
+
+- **Token at rest:** the Linear token is AES-256-GCM encrypted with
+  `COOKIE_SECRET` before it is written to an HttpOnly/Secure/`SameSite=Strict`
+  cookie, capped to a 7-day max age. Rotate `COOKIE_SECRET` to invalidate every
+  live session (users just log in again).
+- **Sign out:** `/oauth/logout` clears the cookie and best-effort revokes the
+  token at Linear. Linked from the app header.
+- **HTTP hardening:** `public/_headers` ships a strict CSP (with a
+  `report-to`/`report-uri` → `/csp-report`), HSTS, `frame-ancestors 'none'`,
+  `Permissions-Policy`, and `X-Robots-Tag: noindex`.
+- **Proxy scope:** `/api/linear` only forwards ggantt's six named GraphQL
+  operations; anything else is rejected with 403.
+- **Observability:** Functions emit one-line JSON logs (`{level,event,ts,…}`).
+  Tail them with `wrangler pages deployment tail` or ship them off-platform by
+  enabling **Cloudflare Logpush** (Pages → Settings → Logpush) — no app change
+  needed. A spike of `csp.violation` / `proxy.operation.rejected` events is the
+  early signal that something got past the client-side defenses.
+- **CI:** `.github/workflows/deploy.yml` runs `pnpm run check` (typecheck +
+  lint + tests) and only deploys if it passes.
 
 ## Feature requests & bug reports
 
