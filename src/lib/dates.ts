@@ -26,32 +26,7 @@ export interface DateRange {
 const PAD_DAYS = 7;
 
 export function computeRange(issues: IssueNode[]): DateRange {
-  const today = startOfDay(new Date());
-  let min = today;
-  let max = today;
-
-  for (const i of issues) {
-    const s = issueStart(i);
-    if (s < min) {
-      min = s;
-    }
-    if (s > max) {
-      max = s;
-    }
-    const e = issueEnd(i);
-    if (e) {
-      if (e < min) {
-        min = e;
-      }
-      if (e > max) {
-        max = e;
-      }
-    }
-  }
-
-  min = addDays(min, -PAD_DAYS);
-  max = addDays(max, PAD_DAYS);
-  return { min, max, days: differenceInCalendarDays(max, min) + 1 };
+  return rangeFromPairs(issues.map((i) => [issueStart(i), issueEnd(i)]));
 }
 
 export function rangeFromPairs(pairs: [Date, Date | null][]): DateRange {
