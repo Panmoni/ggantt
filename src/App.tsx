@@ -1,5 +1,6 @@
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import logoUrl from "@/assets/logo.svg";
 import { CalendarView } from "@/components/CalendarView";
 import { FilterBar } from "@/components/FilterBar";
 import { GanttChart } from "@/components/GanttChart";
@@ -104,7 +105,10 @@ function SignedIn({ viewerName }: { viewerName: string }) {
     <main className="mx-auto max-w-[1600px] p-6">
       <header className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="font-semibold text-2xl text-slate-900">ggantt</h1>
+          <div className="flex items-center gap-2">
+            <img alt="" height={28} src={logoUrl} width={28} />
+            <h1 className="font-semibold text-2xl text-slate-900">ggantt</h1>
+          </div>
           <div className="flex overflow-hidden rounded border border-slate-200">
             {VIEWS.map((v) => (
               <button
@@ -130,9 +134,14 @@ function SignedIn({ viewerName }: { viewerName: string }) {
             {fetching > 0 ? "Refreshing…" : "↻ Refresh"}
           </button>
         </div>
-        <p className="text-slate-500 text-sm">
-          Signed in as <span className="font-medium">{viewerName}</span>
-        </p>
+        <div className="text-right">
+          <p className="text-slate-500 text-sm">
+            Signed in as <span className="font-medium">{viewerName}</span>
+          </p>
+          <p className="font-mono text-[10px] text-slate-300 leading-none">
+            {__COMMIT_HASH__}
+          </p>
+        </div>
       </header>
 
       {view === "projects" ? (
