@@ -12,7 +12,9 @@
     "dev": "concurrently -k -n vite,cf -c green,blue \"vite --port 7374 --strictPort\" \"wrangler pages dev --proxy 7374 --port 7373\"",
     "dev:vite-only": "vite --port 7374",
     "typecheck": "tsc -b --noEmit",
-    "check": "tsc -b --noEmit && biome check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "tsc -b --noEmit && biome check && vitest run",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "format": "biome format --write",
@@ -41,6 +43,7 @@
     "typescript": "~6.0.2",
     "ultracite": "^7.4.4",
     "vite": "^8.0.4",
+    "vitest": "^3.2.4",
     "wrangler": "^4.50.0"
   }
 }
