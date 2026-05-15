@@ -102,7 +102,7 @@ function SignedIn({ viewerName }: { viewerName: string }) {
   };
 
   return (
-    <main className="mx-auto max-w-[1600px] p-6">
+    <main className="w-full p-6">
       <header className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
