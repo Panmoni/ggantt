@@ -1,77 +1,42 @@
-const COOKIE_SPLIT = /;\s*/;
+import { parseCookie } from "../_lib/cookies.ts";
+import { decryptToken } from "../_lib/crypto.ts";
+import { allowedOperation } from "../_lib/graphql.ts";
+import { log } from "../_lib/log.ts";
+import { fetchUpstream } from "../_lib/upstream.ts";
 
-// The proxy forwards the request body verbatim to Linear with the user's
-// read/write token attached. Without this gate it is the *entire* Linear API
-// (delete issues, mint API keys, exfiltrate the workspace); with it, the
-// blast radius of any in-page script is exactly the six operations ggantt
-// itself issues. These names must stay in sync with src/lib/queries.ts.
-const ALLOWED_OPERATIONS = new Set([
-  "Viewer",
-  "Issues",
-  "IssueSetDue",
-  "IssueSetTitle",
-  "Projects",
-  "ProjectSetDates",
-]);
-
-const OPERATION_RE = /\b(?:query|mutation)\s+([A-Za-z_]\w*)/;
-
-// Returns the named operation only if it is a single, allow-listed query or
-// mutation. Anonymous operations, subscriptions, and unparseable bodies are
-// rejected — ggantt never issues any of those.
-function allowedOperation(body: string): boolean {
-  let query: unknown;
-  try {
-    query = (JSON.parse(body) as { query?: unknown }).query;
-  } catch {
-    return false;
-  }
-  if (typeof query !== "string") {
-    return false;
-  }
-  const name = OPERATION_RE.exec(query)?.[1];
-  return name !== undefined && ALLOWED_OPERATIONS.has(name);
+interface Env {
+  COOKIE_SECRET?: string;
 }
 
-function parseCookie(header: string | null, name: string): string | undefined {
-  if (!header) {
-    return;
+async function handleProxy(request: Request, env: Env): Promise<Response> {
+  if (!env.COOKIE_SECRET) {
+    log("error", "config.missing", { var: "COOKIE_SECRET" });
+    return new Response("Server misconfigured", { status: 500 });
   }
-  for (const part of header.split(COOKIE_SPLIT)) {
-    const eq = part.indexOf("=");
-    if (eq > 0 && part.slice(0, eq) === name) {
-      return decodeURIComponent(part.slice(eq + 1));
-    }
-  }
-  return;
-}
 
-export const onRequestPost: PagesFunction = async ({ request }) => {
   // CSRF defense-in-depth: this endpoint attaches the user's read/write Linear
-  // token to whatever GraphQL body it receives, so reject any cross-origin
-  // caller rather than relying solely on the cookie's SameSite=Lax attribute.
-  const origin = request.headers.get("Origin");
-  if (origin && origin !== new URL(request.url).origin) {
+  // token to whatever GraphQL body it receives. The SameSite=Strict cookie
+  // already blocks cross-site sends; additionally require the Origin header to
+  // be present AND match — a state-changing POST from the SPA always sends it.
+  if (request.headers.get("Origin") !== new URL(request.url).origin) {
     return new Response("Cross-origin request rejected", { status: 403 });
   }
 
-  const cookieHeader = request.headers.get("Cookie");
-  const token = parseCookie(cookieHeader, "ggantt_token");
+  const sealed = parseCookie(request.headers.get("Cookie"), "ggantt_token");
+  const token = sealed
+    ? await decryptToken(sealed, env.COOKIE_SECRET)
+    : undefined;
   if (!token) {
-    console.log(
-      "[api/linear] 401 — Cookie header:",
-      cookieHeader ? `present (${cookieHeader.length} chars)` : "MISSING"
-    );
     return new Response("Unauthenticated", { status: 401 });
   }
 
   const body = await request.text();
   if (!allowedOperation(body)) {
-    console.error("[api/linear] rejected non-allow-listed GraphQL operation");
+    log("warn", "proxy.operation.rejected");
     return new Response("Operation not permitted", { status: 403 });
   }
 
-  const upstream = await fetch("https://api.linear.app/graphql", {
+  const upstream = await fetchUpstream("https://api.linear.app/graphql", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -79,11 +44,25 @@ export const onRequestPost: PagesFunction = async ({ request }) => {
     },
     body,
   });
+  if (upstream === "timeout") {
+    log("error", "proxy.upstream.timeout");
+    return new Response("Upstream timed out", { status: 504 });
+  }
 
   const headers = new Headers({
     "Content-Type":
       upstream.headers.get("Content-Type") ?? "application/json; charset=utf-8",
   });
-
   return new Response(upstream.body, { status: upstream.status, headers });
+}
+
+export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  try {
+    return await handleProxy(request, env);
+  } catch (err) {
+    log("error", "proxy.unhandled", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return new Response("Proxy error", { status: 502 });
+  }
 };

@@ -1,7 +1,11 @@
+import { serializeCookie } from "../_lib/cookies.ts";
+
 interface Env {
   LINEAR_CLIENT_ID: string;
   OAUTH_REDIRECT_URI: string;
 }
+
+const STATE_TTL = 600;
 
 export const onRequestGet: PagesFunction<Env> = ({ request, env }) => {
   const state = crypto.randomUUID();
@@ -13,14 +17,19 @@ export const onRequestGet: PagesFunction<Env> = ({ request, env }) => {
   url.searchParams.set("scope", "read,write");
   url.searchParams.set("state", state);
 
-  const isHttps = new URL(request.url).protocol === "https:";
-  const secure = isHttps ? "; Secure" : "";
+  const secure = new URL(request.url).protocol === "https:";
 
   return new Response(null, {
     status: 302,
     headers: {
       Location: url.toString(),
-      "Set-Cookie": `ggantt_oauth_state=${state}; HttpOnly${secure}; SameSite=Lax; Path=/; Max-Age=600`,
+      // Lax (not Strict): this cookie must survive the cross-site top-level
+      // redirect back from linear.app to /oauth/callback.
+      "Set-Cookie": serializeCookie("ggantt_oauth_state", state, {
+        maxAge: STATE_TTL,
+        sameSite: "Lax",
+        secure,
+      }),
     },
   });
 };
