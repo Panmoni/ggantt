@@ -1,5 +1,38 @@
 const COOKIE_SPLIT = /;\s*/;
 
+// The proxy forwards the request body verbatim to Linear with the user's
+// read/write token attached. Without this gate it is the *entire* Linear API
+// (delete issues, mint API keys, exfiltrate the workspace); with it, the
+// blast radius of any in-page script is exactly the six operations ggantt
+// itself issues. These names must stay in sync with src/lib/queries.ts.
+const ALLOWED_OPERATIONS = new Set([
+  "Viewer",
+  "Issues",
+  "IssueSetDue",
+  "IssueSetTitle",
+  "Projects",
+  "ProjectSetDates",
+]);
+
+const OPERATION_RE = /\b(?:query|mutation)\s+([A-Za-z_]\w*)/;
+
+// Returns the named operation only if it is a single, allow-listed query or
+// mutation. Anonymous operations, subscriptions, and unparseable bodies are
+// rejected — ggantt never issues any of those.
+function allowedOperation(body: string): boolean {
+  let query: unknown;
+  try {
+    query = (JSON.parse(body) as { query?: unknown }).query;
+  } catch {
+    return false;
+  }
+  if (typeof query !== "string") {
+    return false;
+  }
+  const name = OPERATION_RE.exec(query)?.[1];
+  return name !== undefined && ALLOWED_OPERATIONS.has(name);
+}
+
 function parseCookie(header: string | null, name: string): string | undefined {
   if (!header) {
     return;
@@ -32,13 +65,19 @@ export const onRequestPost: PagesFunction = async ({ request }) => {
     return new Response("Unauthenticated", { status: 401 });
   }
 
+  const body = await request.text();
+  if (!allowedOperation(body)) {
+    console.error("[api/linear] rejected non-allow-listed GraphQL operation");
+    return new Response("Operation not permitted", { status: 403 });
+  }
+
   const upstream = await fetch("https://api.linear.app/graphql", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: await request.text(),
+    body,
   });
 
   const headers = new Headers({

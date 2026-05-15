@@ -1,0 +1,18 @@
+# Cloudflare Pages security headers. Vite copies public/ to dist/ root;
+# Pages serves dist/_headers for every response (static assets + Functions).
+#
+# Why this matters here: /api/linear auto-attaches the user's read/write
+# Linear token to any same-origin request, and HttpOnly does NOT stop an
+# in-page script from calling it. CSP + frame-ancestors are the
+# defense-in-depth layer behind React escaping and safeHref.
+#
+# script-src 'self'        — Vite emits external hashed modules, no inline JS.
+# style-src  'unsafe-inline' — required: Tailwind + many React style={{…}} attrs.
+# img-src    data:         — Vite inlines small assets (e.g. the logo) as data URIs.
+# connect-src 'self'       — the SPA only ever fetches /api/linear.
+# frame-ancestors 'none'   — the drag-to-edit UI must not be clickjackable.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
