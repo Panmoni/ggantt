@@ -23,6 +23,10 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Gate the deploy: typecheck + biome/ultracite lint + vitest. A failure
+      # here stops the deploy step from ever running.
+      - run: pnpm run check
+
       - run: pnpm run build
 
       - name: Deploy to Cloudflare Pages
