@@ -19,7 +19,13 @@ import {
   type GroupBy,
 } from "@/lib/filters";
 import { UnauthenticatedError } from "@/lib/linear";
-import { type FontScale, loadFontScale, saveFontScale } from "@/lib/prefs";
+import {
+  FONT_SCALE_LABEL,
+  FONT_SCALES,
+  type FontScale,
+  loadFontScale,
+  saveFontScale,
+} from "@/lib/prefs";
 import type { IssueNode, ProjectNode } from "@/lib/queries";
 import { parseUrl, toQuery } from "@/lib/urlState";
 
@@ -116,7 +122,9 @@ function SignedIn({ viewerName }: { viewerName: string }) {
     <main className="w-full p-6">
       <AppHeader
         fetching={fetching}
+        fontScale={fontScale}
         onRefresh={refresh}
+        setFontScale={setFontScale}
         setView={setView}
         view={view}
         viewerName={viewerName}
@@ -138,7 +146,6 @@ function SignedIn({ viewerName }: { viewerName: string }) {
           issues={issues}
           options={options}
           setFilters={setFilters}
-          setFontScale={setFontScale}
           setGroupBy={setGroupBy}
           view={view}
         />
@@ -153,12 +160,16 @@ function AppHeader({
   fetching,
   onRefresh,
   viewerName,
+  fontScale,
+  setFontScale,
 }: {
   view: View;
   setView: (v: View) => void;
   fetching: number;
   onRefresh: () => void;
   viewerName: string;
+  fontScale: FontScale;
+  setFontScale: (s: FontScale) => void;
 }) {
   return (
     <header className="mb-6 flex items-center justify-between">
@@ -192,13 +203,38 @@ function AppHeader({
           {fetching > 0 ? "Refreshing…" : "↻ Refresh"}
         </button>
       </div>
-      <div className="text-right">
+      <div className="flex flex-col items-end gap-1.5">
         <p className="text-slate-500 text-sm">
           Signed in as <span className="font-medium">{viewerName}</span>
         </p>
-        <p className="font-mono text-[10px] text-slate-300 leading-none">
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-500 text-xs">Text:</span>
+          <div className="flex overflow-hidden rounded border border-slate-200">
+            {FONT_SCALES.map((s) => (
+              <button
+                className={`px-2 py-0.5 text-xs transition ${
+                  fontScale === s
+                    ? "bg-slate-900 text-white"
+                    : "bg-white text-slate-700 hover:bg-slate-100"
+                }`}
+                key={s}
+                onClick={() => setFontScale(s)}
+                title={`${FONT_SCALE_LABEL[s]} text size`}
+                type="button"
+              >
+                {FONT_SCALE_LABEL[s]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <a
+          className="font-mono text-slate-400 text-xs hover:text-slate-700 hover:underline"
+          href="https://github.com/Panmoni/ggantt"
+          rel="noreferrer"
+          target="_blank"
+        >
           {__COMMIT_HASH__}
-        </p>
+        </a>
       </div>
     </header>
   );
@@ -239,7 +275,6 @@ function IssueArea({
   groupBy,
   setGroupBy,
   fontScale,
-  setFontScale,
   filtered,
   view,
 }: {
@@ -252,7 +287,6 @@ function IssueArea({
   groupBy: GroupBy;
   setGroupBy: (g: GroupBy) => void;
   fontScale: FontScale;
-  setFontScale: (s: FontScale) => void;
   filtered: IssueNode[];
   view: View;
 }) {
@@ -278,11 +312,9 @@ function IssueArea({
     <>
       <FilterBar
         filters={filters}
-        fontScale={fontScale}
         groupBy={groupBy}
         options={options}
         setFilters={setFilters}
-        setFontScale={setFontScale}
         setGroupBy={setGroupBy}
       />
       <p className="mb-3 text-slate-500 text-sm">

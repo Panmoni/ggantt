@@ -55,3 +55,10 @@ pnpm deploy          # build + wrangler pages deploy dist
 Set `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET`, and
 `OAUTH_REDIRECT_URI=https://<domain>/oauth/callback` as Pages production env
 vars, and add that callback URL to the Linear OAuth app.
+
+## Feature requests & bug reports
+
+Found a bug or want a feature? [File a GitHub issue](../../issues/new).
+
+Need something like this built for you? I'm available for hire — email
+<george@panmoni.com>.
