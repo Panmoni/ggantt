@@ -1,0 +1,14 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+  "extends": ["ultracite/biome/core", "ultracite/biome/react"],
+  "files": {
+    "includes": [
+      "src/**",
+      "functions/**",
+      "*.ts",
+      "*.tsx",
+      "!dist",
+      "!node_modules"
+    ]
+  }
+}

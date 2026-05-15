@@ -1,0 +1,6 @@
+# Local dev secrets for `wrangler pages dev`. Copy to `.dev.vars` and fill in.
+# Production values go in the Cloudflare Pages dashboard (Settings → Environment variables).
+
+LINEAR_CLIENT_ID=
+LINEAR_CLIENT_SECRET=
+OAUTH_REDIRECT_URI=http://localhost:7373/oauth/callback

@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Local env / secrets — NEVER commit
+.dev.vars
+.env
+.env.local
+.env.*.local
+notes.md
+
+# Wrangler local state
+.wrangler/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.log
