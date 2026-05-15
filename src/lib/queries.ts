@@ -159,8 +159,8 @@ export interface IssueSetTitleResponse {
 }
 
 export const PROJECTS_QUERY = /* GraphQL */ `
-  query Projects($first: Int!) {
-    projects(first: $first) {
+  query Projects($first: Int!, $after: String) {
+    projects(first: $first, after: $after) {
       nodes {
         id
         name
@@ -173,13 +173,17 @@ export const PROJECTS_QUERY = /* GraphQL */ `
           id
           name
         }
-        projectMilestones {
+        projectMilestones(first: 50) {
           nodes {
             id
             name
             targetDate
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
@@ -204,7 +208,10 @@ export interface ProjectNode {
 }
 
 export interface ProjectsResponse {
-  projects: { nodes: ProjectNode[] };
+  projects: {
+    nodes: ProjectNode[];
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+  };
 }
 
 export const PROJECT_SET_DATES_MUTATION = /* GraphQL */ `
