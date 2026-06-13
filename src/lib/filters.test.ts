@@ -55,10 +55,18 @@ describe("buildOptions", () => {
 });
 
 describe("applyFilters", () => {
-  it("hides completed issues when hideCompleted is set", () => {
+  it("hides done, cancelled, and duplicate issues when hideCompleted is set", () => {
     const issues = [
       makeIssue({ id: "open" }),
       makeIssue({ id: "done", state: completedState }),
+      makeIssue({
+        id: "cancelled",
+        state: { id: "c", name: "Cancelled", type: "canceled", color: "#999" },
+      }),
+      makeIssue({
+        id: "duplicate",
+        state: { id: "d", name: "Duplicate", type: "canceled", color: "#999" },
+      }),
     ];
     const result = applyFilters(issues, emptyFilters());
     expect(result.map((i) => i.id)).toEqual(["open"]);

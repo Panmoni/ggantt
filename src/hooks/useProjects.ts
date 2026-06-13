@@ -5,6 +5,7 @@ import {
   type ProjectNode,
   type ProjectsResponse,
 } from "@/lib/queries";
+import { isDoneCancelledOrDuplicate } from "@/lib/status";
 
 export function useProjects() {
   return useQuery({
@@ -28,7 +29,9 @@ export function useProjects() {
           ? data.projects.pageInfo.endCursor
           : null;
       } while (after !== null);
-      return nodes;
+      // Hide resolved projects (Done / Cancelled / Duplicate) from the
+      // Projects view — only active work belongs on the roadmap.
+      return nodes.filter((p) => !isDoneCancelledOrDuplicate(p.status));
     },
     staleTime: 5000,
     refetchInterval: 30_000,

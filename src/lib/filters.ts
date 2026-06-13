@@ -1,4 +1,5 @@
 import type { IssueNode } from "@/lib/queries";
+import { isDoneCancelledOrDuplicate } from "@/lib/status";
 
 export const GROUP_BY_VALUES = [
   "flat",
@@ -107,7 +108,7 @@ export function applyFilters(issues: IssueNode[], f: Filters): IssueNode[] {
     if (f.hideUnscheduled && !i.dueDate) {
       return false;
     }
-    if (f.hideCompleted && i.state.type === "completed") {
+    if (f.hideCompleted && isDoneCancelledOrDuplicate(i.state)) {
       return false;
     }
     return (

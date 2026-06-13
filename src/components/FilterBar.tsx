@@ -83,7 +83,7 @@ export function FilterBar({
           onChange={(e) => patch({ hideCompleted: e.target.checked })}
           type="checkbox"
         />
-        Hide done
+        Hide done/cancelled
       </label>
 
       <div className="ml-2 flex items-center gap-1.5">

@@ -174,6 +174,11 @@ export const PROJECTS_QUERY = /* GraphQL */ `
         progress
         startDate
         targetDate
+        status {
+          id
+          name
+          type
+        }
         lead {
           id
           name
@@ -208,6 +213,7 @@ export interface ProjectNode {
   progress: number;
   projectMilestones: { nodes: ProjectMilestone[] };
   startDate: string | null;
+  status: { id: string; name: string; type: string };
   targetDate: string | null;
   url: string;
 }
