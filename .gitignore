@@ -15,6 +15,9 @@ notes.md
 # Wrangler local state
 .wrangler/
 
+# Planning docs
+docs/
+
 # Agent / editor / OS
 .claude/
 .vscode/
